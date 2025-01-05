@@ -68,6 +68,10 @@ class FileOrganizer:
         # 创建处理队列
         self.process_queue = asyncio.Queue()
         
+        # 创建延迟处理队列
+        self.delayed_files = {}  # {file_path: created_time}
+        self.delay_hours = 3  # 延迟3小时处理
+        
         # 创建文件系统监控
         self.event_handler = FileHandler(self)
         self.observer = Observer()
@@ -157,6 +161,21 @@ class FileOrganizer:
                 logging.error(f"文件路径不安全,跳过处理: {file_path}")
                 return False
             
+            # 检查文件是否需要延迟处理
+            current_time = time.time()
+            if str(file_path) not in self.delayed_files:
+                self.delayed_files[str(file_path)] = current_time
+                logging.info(f"文件已加入延迟处理队列: {file_path}")
+                return True
+            
+            # 检查是否达到延迟时间
+            created_time = self.delayed_files[str(file_path)]
+            if current_time - created_time < self.delay_hours * 3600:  # 3小时
+                return False  # 还未到处理时间
+            
+            # 移除出延迟队列
+            self.delayed_files.pop(str(file_path))
+            
             category = get_file_category(file_path)
             if not category:
                 logging.info(f"跳过未知类型文件: {file_path}")
@@ -238,6 +257,12 @@ class FileOrganizer:
                     (k, v) for k, v in self.processed_files.items()
                     if v > expired_time and os.path.exists(k)
                 )
+                
+                # 清理延迟队列中已不存在的文件
+                self.delayed_files = {
+                    k: v for k, v in self.delayed_files.items()
+                    if os.path.exists(k)
+                }
                 
                 self.last_cleanup_time = current_time
                 
