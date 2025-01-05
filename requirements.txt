@@ -1,0 +1,9 @@
+psutil>=5.9.0
+pystray>=0.19.4
+Pillow>=10.0.0
+pywin32>=306
+watchdog>=3.0.0
+win11toast>=0.34
+send2trash>=1.8.0
+customtkinter>=5.2.1
+aiofiles>=23.2.1 
